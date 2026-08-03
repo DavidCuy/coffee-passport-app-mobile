@@ -93,9 +93,15 @@ deben seguir:
   para el ejemplo.
 - **Dependency injection**: no se agregó `get_it` ni similar. La
   composición es manual en `main.dart`.
-- **`google_maps_flutter` / `geolocator`**: NO se agregaron a
-  `pubspec.yaml` todavía (ver comentario ahí). Se agregarán cuando
-  arranque la feature real de "Mapa & Directorio de Barras".
+- **`google_maps_flutter` / `geolocator`**: agregados a `pubspec.yaml`
+  (2026-08-02, ver `lib/features/shop_directory/presentation/widgets/shop_map_view.dart`
+  y `lib/features/scan/data/datasources/geolocation_datasource.dart`).
+  `GeolocationDatasource` sigue viviendo bajo `features/scan/` (no se
+  subió a `core/` a pesar de que ahora 2 features la usan, para no
+  romper el import literal ya usado por
+  `integration_test/common/mock_location.dart` del Agente QA Mobile)
+  — `shop_directory` la importa cruzado explícitamente, caso
+  contemplado por la regla de dependencias de más abajo.
 - **Pantallas reales** (pasaporte, mapa, escáner QR, diario de cata,
   laboratorio): fuera de alcance de este bootstrap, son trabajo
   aparte.

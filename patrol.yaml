@@ -1,0 +1,29 @@
+# Config de patrol_cli (https://patrol.leancode.co/) para
+# coffee-passport-app-mobile.
+#
+# Agregado por el Agente QA Mobile. Nota de la 3ra pasada (2026-07-30):
+# `patrol test` real (Android/iOS con automatización nativa) sigue sin
+# poder correr en este entorno — el único emulador disponible
+# (Pixel_Fold_API_35) no cumple la versión de Android SDK que pide el
+# Flutter instalado. La suite corrió con `patrolWidgetTest`
+# (`patrol_finders`) vía `flutter test -d windows` en su lugar — ver
+# `test/e2e/test-matrices/pasaporte-y-scan.md`.
+
+app_name: Pasaporte Café
+
+android:
+  package_name: com.pasaportecafe.coffee_passport_app
+
+ios:
+  bundle_id: com.pasaportecafe.coffeePassportApp
+
+# Bug #4 (prefijo /prod faltante) resuelto en la 3ra pasada — el default
+# de `Env.apiBaseUrl` ya no necesita `--dart-define` en el caso normal.
+#
+# Confirmado 6ta pasada (2026-08-02): el "5000" de la 5ta pasada fue un
+# error — puerto real del backend a mano (`fastapi dev`): 8000. Default
+# actual de `Env.apiBaseUrl`: http://localhost:8000/prod. Sólo hace
+# falta `--dart-define` si se corre contra un backend en otro host/puerto
+# (ej. emulador Android, physical device en la misma red):
+#   --dart-define=API_BASE_URL=http://10.0.2.2:8000/prod       (emulador Android)
+#   --dart-define=API_BASE_URL=http://192.168.x.x:8000/prod    (dispositivo físico en la misma red)

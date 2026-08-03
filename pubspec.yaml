@@ -35,15 +35,45 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  # PENDIENTE (ver ARCHITECTURE.md): se agregarán cuando arranque la
-  # feature "Mapa & Directorio de Barras" (Fase 1, sección 2). No
-  # agregar todavía — el esqueleto actual no las necesita.
-  #   google_maps_flutter: ^2.x
-  #   geolocator: ^13.x
+  # Cliente HTTP para consumir coffee-passport-backend (ver
+  # lib/core/network/api_client.dart).
+  http: ^1.6.0
+
+  # Almacenamiento local simple usado por el "dev login" temporal
+  # (ver lib/core/auth/dev_auth_local_datasource.dart) — guarda el
+  # X-Auth-User-Sub de prueba mientras no exista login real.
+  shared_preferences: ^2.5.3
+
+  # Captura de GPS al momento de escanear un QR (feature `scan`,
+  # ver lib/features/scan). Agregado ahora que la feature real lo
+  # necesita — antes estaba pendiente en este comentario.
+  #
+  # También reutilizado (import cruzado explícito, no se movió a
+  # `core/` para no romper el import literal que ya usa
+  # `integration_test/common/mock_location.dart` del Agente QA
+  # Mobile) por la feature `shop_directory` para centrar el mapa en
+  # la posición del usuario — ver `presentation/widgets/shop_map_view.dart`.
+  geolocator: ^14.0.2
+
+  # Mapa & Directorio de Barras (Fase 1, sección 2) — agregado ahora
+  # que esta feature arranca de verdad (antes pendiente, ver
+  # ARCHITECTURE.md). Requiere una API key real de Google Maps para
+  # que las teselas del mapa carguen (ver comentarios en
+  # `android/app/src/main/AndroidManifest.xml` e
+  # `ios/Runner/AppDelegate.swift`) — sin key, el SDK igual compila y
+  # corre, pero el mapa se ve en blanco/"for development purposes
+  # only".
+  google_maps_flutter: ^2.12.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Usado sólo en test/widget_test.dart para inyectar un backend
+  # in-memory de shared_preferences y no depender de platform channels
+  # reales al probar el "dev login" (ver
+  # lib/core/auth/dev_auth_local_datasource.dart).
+  shared_preferences_platform_interface: ^2.4.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -51,6 +81,20 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # --- Agente QA Mobile: E2E con Patrol (sobre integration_test) ---
+  # Agregado en la primera pasada de tests E2E (ver
+  # test/e2e/test-matrices/pasaporte-y-scan.md). NO se corrió
+  # `flutter pub get` todavía a propósito (regla de esta pasada: escribir
+  # código, no ejecutar/compilar) — el Agente Mobile o quien retome debe
+  # correr `flutter pub get` y confirmar que estas versiones siguen siendo
+  # las últimas estables antes de `patrol test`.
+  integration_test:
+    sdk: flutter
+  patrol: ^3.15.2
+  patrol_finders: ^2.7.2
+  # `patrol_cli` NO va aquí: es una herramienta de línea de comandos,
+  # se instala aparte con `dart pub global activate patrol_cli`.
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
