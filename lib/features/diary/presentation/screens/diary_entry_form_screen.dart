@@ -5,7 +5,7 @@ import '../../../passport/presentation/widgets/stamp_tile.dart'
     show PassportColors;
 import '../../../shop_directory/domain/entities/shop.dart';
 import '../../../shop_directory/presentation/widgets/rating_stars.dart';
-import '../../domain/entities/brew_method.dart';
+import '../../../../core/brew/brew_method.dart';
 import '../../domain/entities/diary_entry.dart';
 import '../../domain/repositories/diary_repository.dart';
 import '../widgets/brew_method_chip_row.dart';

@@ -1,5 +1,5 @@
 import '../../../../core/network/api_client.dart';
-import '../../domain/entities/brew_method.dart';
+import '../../../../core/brew/brew_method.dart';
 import '../../domain/entities/diary_entry.dart';
 import '../../domain/repositories/diary_repository.dart';
 

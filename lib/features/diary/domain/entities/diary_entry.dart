@@ -1,4 +1,4 @@
-import 'brew_method.dart';
+import '../../../../core/brew/brew_method.dart';
 
 /// Entidad de dominio: una entrada del Diario de cata
 /// (`diary_entries` — ver `Fase 1 - Funcionalidades.md`, sección 4, y

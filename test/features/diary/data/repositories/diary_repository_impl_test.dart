@@ -14,7 +14,7 @@ import 'dart:convert';
 import 'package:coffee_passport_app/core/auth/dev_auth_local_datasource.dart';
 import 'package:coffee_passport_app/core/network/api_client.dart';
 import 'package:coffee_passport_app/features/diary/data/repositories/diary_repository_impl.dart';
-import 'package:coffee_passport_app/features/diary/domain/entities/brew_method.dart';
+import 'package:coffee_passport_app/core/brew/brew_method.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

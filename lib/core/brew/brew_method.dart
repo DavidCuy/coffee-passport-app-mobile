@@ -1,13 +1,14 @@
-/// Método de extracción usado en una entrada del Diario de cata.
+/// Método de extracción — usado tanto por una entrada del Diario de
+/// cata (`diary.brewMethod`) como por una receta del Laboratorio
+/// (`Recipe.brewMethod`, ver `Fase 1 - Funcionalidades.md`, sección 5).
 ///
-/// Enum fijo (Fase 1, sección 4 y sección 5 del vault de producto —
-/// mismo set de métodos que usa el Laboratorio para sus recetas:
-/// V60, prensa francesa, espresso, chemex, aeropress). No hay
-/// referencia a un enum equivalente ya escrito en el repo (la feature
-/// `lab`/recetas todavía no existe), así que este es el primero y vive
-/// acá — si más adelante `lab` necesita el mismo concepto, debería
-/// moverse a `core/` en vez de duplicarse (ver regla de
-/// `ARCHITECTURE.md`).
+/// Enum fijo (V60, prensa francesa, espresso, chemex, aeropress).
+/// Vivió originalmente en `features/diary/domain/entities/` (único
+/// consumidor cuando se escribió, 2026-08-03) con una nota explícita
+/// de que debía subir a `core/` en cuanto una segunda feature lo
+/// necesitara — exactamente lo que pasó al arrancar `lab` (2026-08-04,
+/// recetas por método de extracción), así que se movió acá siguiendo
+/// la regla de `ARCHITECTURE.md` en vez de duplicar el concepto.
 enum BrewMethod {
   v60,
   prensaFrancesa,

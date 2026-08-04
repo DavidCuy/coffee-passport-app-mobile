@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../passport/presentation/widgets/stamp_tile.dart'
     show PassportColors;
-import '../../domain/entities/brew_method.dart';
+import '../../../../core/brew/brew_method.dart';
 
 /// Fila de chips para elegir el método de extracción — equivalente al
 /// `.chip-row`/`#diaryMethods` del mock (`pasaporte-cafe-mock.html`):

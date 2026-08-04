@@ -6,6 +6,11 @@ import 'core/network/api_client.dart';
 import 'features/diary/data/repositories/diary_repository_impl.dart';
 import 'features/diary/domain/repositories/diary_repository.dart';
 import 'features/diary/presentation/screens/diary_screen.dart';
+import 'features/lab/data/repositories/coffee_repository_impl.dart';
+import 'features/lab/data/repositories/recipe_repository_impl.dart';
+import 'features/lab/domain/repositories/coffee_repository.dart';
+import 'features/lab/domain/repositories/recipe_repository.dart';
+import 'features/lab/presentation/screens/lab_screen.dart';
 import 'features/passport/data/repositories/passport_repository_impl.dart';
 import 'features/passport/domain/repositories/passport_repository.dart';
 import 'features/passport/presentation/screens/passport_screen.dart';
@@ -99,9 +104,10 @@ class _AppRootState extends State<_AppRoot> {
 }
 
 /// Navegación mínima entre las pantallas reales construidas hasta
-/// ahora (Pasaporte, Escanear, Cafeterías, Diario de cata). No es una
-/// feature en sí — es sólo el andamiaje de navegación necesario para
-/// poder probarlas todas desde un solo build.
+/// ahora (Pasaporte, Escanear, Cafeterías, Diario de cata,
+/// Laboratorio). No es una feature en sí — es sólo el andamiaje de
+/// navegación necesario para poder probarlas todas desde un solo
+/// build.
 class _HomeTabs extends StatefulWidget {
   const _HomeTabs();
 
@@ -128,6 +134,12 @@ class _HomeTabsState extends State<_HomeTabs> {
   late final DiaryRepository _diaryRepository = DiaryRepositoryImpl(
     apiClient: _apiClient,
   );
+  late final CoffeeRepository _coffeeRepository = CoffeeRepositoryImpl(
+    apiClient: _apiClient,
+  );
+  late final RecipeRepository _recipeRepository = RecipeRepositoryImpl(
+    apiClient: _apiClient,
+  );
 
   int _index = 0;
 
@@ -150,6 +162,10 @@ class _HomeTabsState extends State<_HomeTabs> {
       DiaryScreen(
         diaryRepository: _diaryRepository,
         shopRepository: _shopRepository,
+      ),
+      LabScreen(
+        coffeeRepository: _coffeeRepository,
+        recipeRepository: _recipeRepository,
       ),
     ];
     return Scaffold(
@@ -184,6 +200,12 @@ class _HomeTabsState extends State<_HomeTabs> {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: 'Diario',
+          ),
+          NavigationDestination(
+            key: Key('nav_lab_tab'),
+            icon: Icon(Icons.science_outlined),
+            selectedIcon: Icon(Icons.science),
+            label: 'Laboratorio',
           ),
         ],
       ),

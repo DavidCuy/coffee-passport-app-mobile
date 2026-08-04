@@ -72,4 +72,41 @@ void main() {
     // error explícito (no un unhandled exception).
     expect(find.textContaining('No se pudo cargar tu pasaporte'), findsOneWidget);
   });
+
+  testWidgets(
+    'la pantalla de Laboratorio muestra sus 3 sub-tabs y no truena sin '
+    'backend disponible',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const CoffeePassportApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('dev_login_submit_button')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('nav_lab_tab')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lab_screen')), findsOneWidget);
+      expect(find.byKey(const Key('lab_tab_cafes_button')), findsOneWidget);
+      expect(find.byKey(const Key('lab_tab_recetas_button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('lab_tab_utilidades_button')),
+        findsOneWidget,
+      );
+
+      // La Calculadora de ratio es 100% cliente — debe funcionar sin
+      // depender de que `GET /coffees`/`GET /recipes` respondan.
+      await tester.tap(find.byKey(const Key('lab_tab_utilidades_button')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('lab_ratio_calculator_view')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('lab_calc_water_result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('lab_calc_dose_plus_button')));
+      await tester.pump();
+      expect(find.text('16 g'), findsOneWidget);
+    },
+  );
 }

@@ -1,4 +1,4 @@
-import '../entities/brew_method.dart';
+import '../../../../core/brew/brew_method.dart';
 import '../entities/diary_entry.dart';
 
 /// Contrato de dominio para el Diario de cata (`diary_entries`).
