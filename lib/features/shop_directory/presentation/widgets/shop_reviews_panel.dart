@@ -275,8 +275,9 @@ class _MyReviewSection extends StatelessWidget {
       if (myReview != null) {
         return ShopReviewCard(
           review: myReview!,
-          onEdit: onEdit,
-          onDelete: onDelete,
+          onEdit: submitting ? null : onEdit,
+          onDelete: submitting ? null : onDelete,
+          deleting: submitting,
         );
       }
       return OutlinedButton.icon(

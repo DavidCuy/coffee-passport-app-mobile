@@ -21,11 +21,23 @@ class ShopReviewCard extends StatelessWidget {
     required this.review,
     this.onEdit,
     this.onDelete,
+    this.deleting = false,
   });
 
   final ShopReview review;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+
+  /// `true` mientras `DELETE .../reviews/mine` está en vuelo — muestra
+  /// un spinner en el botón "Borrar" (mismo criterio que el botón
+  /// "Guardar" del formulario, ver `ShopReviewsPanel._MyReviewSection`)
+  /// en vez de dejarlo sin feedback visual. Bug real encontrado por QA
+  /// Mobile (caso REV-06): sin ningún widget animando durante el
+  /// borrado, `pumpAndSettle()` no tenía ningún frame pendiente que
+  /// esperar y devolvía el control antes de que el DELETE+refresh
+  /// terminaran de verdad — la reseña sí se borraba en el backend, la
+  /// UI (y el test) sólo la veían un beat tarde.
+  final bool deleting;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +77,7 @@ class ShopReviewCard extends StatelessWidget {
                 style: const TextStyle(color: PassportColors.textSecondary),
               ),
             ),
-          if (review.isMine && (onEdit != null || onDelete != null))
+          if (review.isMine && (onEdit != null || onDelete != null || deleting))
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
@@ -76,14 +88,23 @@ class ShopReviewCard extends StatelessWidget {
                       onPressed: onEdit,
                       child: const Text('Editar'),
                     ),
-                  if (onDelete != null)
+                  if (onDelete != null || deleting)
                     TextButton(
                       key: const Key('shop_review_delete_button'),
                       onPressed: onDelete,
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFFB91C1C),
                       ),
-                      child: const Text('Borrar'),
+                      child: deleting
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFB91C1C),
+                              ),
+                            )
+                          : const Text('Borrar'),
                     ),
                 ],
               ),

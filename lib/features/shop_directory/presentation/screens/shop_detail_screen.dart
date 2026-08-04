@@ -165,8 +165,19 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
             final data = snapshot.data!;
             final shop = data.shop;
             final isFavorite = _favoriteOverride ?? data.isFavorite;
-            final avgRating = shop.avgRating ?? _clientAvgRating;
-            final reviewCount = shop.reviewCount ?? _clientReviewCount;
+            // Prioriza el promedio recalculado en vivo por
+            // `ShopReviewsPanel` (`_onReviewsChanged`, ver arriba) sobre
+            // el de `shop.avgRating` (snapshot tomado cuando se abrió
+            // la ficha, vía `_load()`): el panel se refresca solo tras
+            // cada mutación (crear/editar/borrar reseña), pero esta
+            // pantalla no vuelve a pedir `GET /shops/{id}` en ese
+            // momento — con la prioridad al revés, el promedio quedaba
+            // congelado en el valor inicial para siempre. Bug real
+            // encontrado por QA Mobile (caso REV-09): "3 de cada 5" no
+            // se actualizaba después de editar la calificación propia,
+            // aunque el backend sí recalculaba bien.
+            final avgRating = _clientAvgRating ?? shop.avgRating;
+            final reviewCount = _clientReviewCount ?? shop.reviewCount;
             return CustomScrollView(
               slivers: [
                 SliverAppBar(

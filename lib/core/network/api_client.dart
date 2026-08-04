@@ -61,12 +61,17 @@ class ApiClient {
   /// GET a [path] del backend. Regresa el body ya decodificado como
   /// JSON (`Map` o `List`, según lo que responda el endpoint).
   ///
-  /// No lanza por status codes que traigan un body JSON parseable con
-  /// significado propio (ej. `POST /scan` responde 409 con
-  /// `{"result": "out_of_range", "distance_meters": ...}`) — es
-  /// responsabilidad de cada repositorio decidir qué hacer con el
-  /// status + body. Sólo lanza [ApiException] si la respuesta no trae
-  /// JSON decodificable, o si es un error de red/timeout.
+  /// A diferencia de `post`/`patch`/`delete` (que devuelven
+  /// [ApiResponse] con el status code para que el repositorio decida,
+  /// caso `POST /scan` con su 409 con significado propio), ningún
+  /// endpoint GET actual del backend usa un status de error con un
+  /// body que el cliente deba interpretar — así que acá sí se lanza
+  /// [ApiException] (con [ApiException.statusCode]) para cualquier
+  /// respuesta fuera de 2xx, usando el `message` del body si viene.
+  /// Bug real encontrado por QA Mobile (caso DIR-07): sin este check,
+  /// un 404 con body JSON válido (`{"message": "..."}`) se devolvía
+  /// como si fuera éxito, y `ShopRepositoryImpl.getShopById` armaba una
+  /// `Shop` fantasma en vez de detectar el 404.
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
     final uri = _resolve(path, query);
     final http.Response response;
@@ -75,7 +80,14 @@ class ApiClient {
     } on Exception catch (e) {
       throw ApiException('No se pudo conectar con el backend: $e');
     }
-    return _decode(response);
+    final decoded = _decode(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = (decoded is Map && decoded['message'] is String)
+          ? decoded['message'] as String
+          : 'Error del backend';
+      throw ApiException(message, statusCode: response.statusCode);
+    }
+    return decoded;
   }
 
   /// POST a [path] con [body] serializado a JSON.

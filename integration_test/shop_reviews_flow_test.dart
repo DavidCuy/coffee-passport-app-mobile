@@ -77,10 +77,19 @@ void main() {
     // importa si esto falla (ej. 404 porque nunca hubo una) — es sólo
     // higiene para no seguir ensuciando la Supabase real en corridas
     // futuras (ver hallazgo #2 de cabecera).
+    //
+    // `otherSub` se limpia también acá: REV-09 lo registra y le siembra
+    // una reseña en `demoShopTwoId` para tener una 2da reseña ajena con
+    // la que promediar. Antes sólo se borraba `mySub` — la de
+    // `otherSub` quedaba huérfana en `demo-cafe-dos` para siempre, y
+    // cada corrida de la suite sumaba una reseña ajena más, rompiendo
+    // el conteo dinámico que espera REV-02 en corridas futuras.
     for (final shopId in {demoShopOneId, demoShopTwoId}) {
-      try {
-        await deleteOwnReview(shopId, sub: mySub);
-      } catch (_) {}
+      for (final sub in {mySub, otherSub}) {
+        try {
+          await deleteOwnReview(shopId, sub: sub);
+        } catch (_) {}
+      }
     }
   });
 
@@ -223,26 +232,36 @@ void main() {
   patrolWidgetTest(
     'REV-08: rating promedio visible en la ficha de la cafetería',
     ($) async {
+      // Baseline REAL antes de sembrar nada — nunca asumir cafetería
+      // "limpia" (ver hallazgo #2 de cabecera).
+      final before = await fetchShopRatingSummary(demoShopTwoId, sub: mySub);
+
       await registerTestUser(sub: otherSub);
       await seedReview(
         demoShopTwoId,
         sub: otherSub,
         rating: 3,
-        comment: 'Rating medio, ajeno.',
+        comment: withStamp('Rating medio, ajeno.'),
       );
       await seedReview(
         demoShopTwoId,
         sub: mySub,
         rating: 5,
-        comment: 'Rating alto, propio.',
+        comment: withStamp('Rating alto, propio.'),
       );
+
+      final expectedAvg =
+          (before.avg * before.count + 3 + 5) / (before.count + 2);
 
       await openShopDetail($, demoShopTwoId);
 
-      // Promedio esperado: (3 + 5) / 2 = 4.0 — viene directo de
-      // shop.avgRating (GET /shops/{id} -> rating_average), sin
-      // depender de que el panel de reseñas termine de cargar.
-      expect(find.textContaining('4.0'), findsWidgets);
+      // Promedio esperado, calculado sobre el baseline real — viene
+      // directo de shop.avgRating (GET /shops/{id} -> rating_average),
+      // sin depender de que el panel de reseñas termine de cargar.
+      expect(
+        find.textContaining(expectedAvg.toStringAsFixed(1)),
+        findsWidgets,
+      );
     },
   );
 
@@ -254,7 +273,7 @@ void main() {
         demoShopOneId,
         sub: mySub,
         rating: 4,
-        comment: 'Reseña sembrada antes de abrir la ficha.',
+        comment: withStamp('Reseña sembrada antes de abrir la ficha.'),
       );
 
       // Se abre directo (nunca se pasó por la UI en esta sesión) — antes
@@ -270,11 +289,9 @@ void main() {
 
   // ---------------------------------------------------------------------
   // Grupo B: pasan por `_submit`/`_delete` de `ShopReviewsPanel` —
-  // disparan el bug real #1 de cabecera. Van al final a propósito: la
-  // excepción no manejada corrompe el binding de `flutter_test` y
-  // arrastra al test que le sigue si hay uno después en el mismo
-  // archivo (confirmado reordenando). Se espera que los 4 queden en
-  // rojo hasta que Mobile arregle `ShopReviewsPanel._refresh()`.
+  // ejercitaban el bug real #1 de cabecera (ya arreglado por Mobile).
+  // Se dejan al final por costumbre de la pasada anterior, ya no hace
+  // falta (no corrompen el binding de tests siguientes).
   // ---------------------------------------------------------------------
 
   patrolWidgetTest(
@@ -282,16 +299,10 @@ void main() {
     ($) async {
       await openShopDetail($, demoShopOneId);
 
-      await writeOwnReview(
-        $,
-        stars: 5,
-        comment: 'Excelente espresso, volvería.',
-      );
+      final comment = withStamp('Excelente espresso, volvería.');
+      await writeOwnReview($, stars: 5, comment: comment);
 
-      expect(
-        find.textContaining('Excelente espresso, volvería.'),
-        findsOneWidget,
-      );
+      expect(find.textContaining(comment), findsOneWidget);
       // Reconocida como propia (is_mine server-side) — expone
       // editar/borrar.
       expect($(const Key('shop_review_edit_button')), findsOneWidget);
@@ -308,22 +319,19 @@ void main() {
         demoShopOneId,
         sub: mySub,
         rating: 3,
-        comment: 'Café correcto, nada más.',
+        comment: withStamp('Café correcto, nada más.'),
       );
       await openShopDetail($, demoShopOneId);
 
       await $(const Key('shop_review_edit_button')).tap();
       await $.pumpAndSettle();
-      await $(const Key('shop_review_comment_input')).enterText(
-        'Volví y mejoró mucho, ahora sí lo recomiendo.',
-      );
+      final newComment =
+          withStamp('Volví y mejoró mucho, ahora sí lo recomiendo.');
+      await $(const Key('shop_review_comment_input')).enterText(newComment);
       await $(const Key('shop_review_submit_button')).tap();
       await $.pumpAndSettle();
 
-      expect(
-        find.textContaining('Volví y mejoró mucho'),
-        findsOneWidget,
-      );
+      expect(find.textContaining(newComment), findsOneWidget);
       // Sigue habiendo una sola tarjeta propia, no un duplicado.
       expect($(const Key('shop_review_edit_button')), findsOneWidget);
     },
@@ -332,11 +340,12 @@ void main() {
   patrolWidgetTest(
     'REV-06: borrar reseña propia',
     ($) async {
+      final comment = withStamp('Para borrar en este caso.');
       await seedReview(
         demoShopOneId,
         sub: mySub,
         rating: 2,
-        comment: 'Para borrar en este caso.',
+        comment: comment,
       );
       await openShopDetail($, demoShopOneId);
       expect($(const Key('shop_review_delete_button')), findsOneWidget);
@@ -345,7 +354,7 @@ void main() {
       await $.pumpAndSettle();
 
       // No hay diálogo de confirmación en el código real.
-      expect(find.textContaining('Para borrar en este caso.'), findsNothing);
+      expect(find.textContaining(comment), findsNothing);
       expect($(const Key('shop_review_write_button')), findsOneWidget);
     },
   );
@@ -353,23 +362,30 @@ void main() {
   patrolWidgetTest(
     'REV-09: el promedio se recalcula tras editar la reseña propia',
     ($) async {
+      final before = await fetchShopRatingSummary(demoShopTwoId, sub: mySub);
+
       await registerTestUser(sub: otherSub);
       await seedReview(
         demoShopTwoId,
         sub: otherSub,
         rating: 5,
-        comment: 'Rating alto, ajeno.',
+        comment: withStamp('Rating alto, ajeno.'),
       );
       await seedReview(
         demoShopTwoId,
         sub: mySub,
         rating: 3,
-        comment: 'Rating a editar.',
+        comment: withStamp('Rating a editar.'),
       );
 
+      final initialAvg =
+          (before.avg * before.count + 5 + 3) / (before.count + 2);
+
       await openShopDetail($, demoShopTwoId);
-      // Promedio inicial: (5 + 3) / 2 = 4.0.
-      expect(find.textContaining('4.0'), findsWidgets);
+      expect(
+        find.textContaining(initialAvg.toStringAsFixed(1)),
+        findsWidgets,
+      );
 
       await $(const Key('shop_review_edit_button')).tap();
       await $.pumpAndSettle();
@@ -377,8 +393,13 @@ void main() {
       await $(const Key('shop_review_submit_button')).tap();
       await $.pumpAndSettle();
 
-      // Promedio tras editar: (5 + 1) / 2 = 3.0.
-      expect(find.textContaining('3.0'), findsWidgets);
+      // Mismo baseline, pero mi rating pasó de 3 a 1.
+      final finalAvg =
+          (before.avg * before.count + 5 + 1) / (before.count + 2);
+      expect(
+        find.textContaining(finalAvg.toStringAsFixed(1)),
+        findsWidgets,
+      );
     },
   );
 }
