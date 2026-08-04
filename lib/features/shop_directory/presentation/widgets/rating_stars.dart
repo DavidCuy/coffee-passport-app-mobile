@@ -36,20 +36,27 @@ class RatingStars extends StatelessWidget {
 
 /// Selector de estrellas interactivo (1-5) para escribir/editar una
 /// reseña propia — equivalente al `.star-row` del Diario de cata en el
-/// mock (`pasaporte-cafe-mock.html` → `#diaryStars`), reutilizado acá
-/// para reseñas de cafetería.
+/// mock (`pasaporte-cafe-mock.html` → `#diaryStars`). Reutilizado tal
+/// cual (sin duplicar el widget) tanto por reseñas de cafetería
+/// (`shop_directory`) como por el formulario del Diario de cata
+/// (`diary`, agregado 2026-08-03) — ver `DiaryEntryFormScreen`.
 ///
-/// Widget keys para QA: `Key('shop_review_star_\$n')` por cada botón
-/// (1 a 5).
+/// Widget keys para QA: `Key('\${keyPrefix}_\$n')` por cada botón (1 a
+/// 5). [keyPrefix] por defecto es `'shop_review_star'` (el nombre
+/// original, no roto para no invalidar los tests ya escritos de
+/// `shop_directory`) — `diary` lo pisa a `'diary_form_star'` para no
+/// exponer keys de otra feature en su propia pantalla.
 class RatingSelector extends StatelessWidget {
   const RatingSelector({
     super.key,
     required this.value,
     required this.onChanged,
+    this.keyPrefix = 'shop_review_star',
   });
 
   final int value;
   final ValueChanged<int> onChanged;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +65,7 @@ class RatingSelector extends StatelessWidget {
       children: List.generate(5, (i) {
         final n = i + 1;
         return IconButton(
-          key: Key('shop_review_star_$n'),
+          key: Key('${keyPrefix}_$n'),
           padding: const EdgeInsets.all(2),
           constraints: const BoxConstraints(),
           onPressed: () => onChanged(n),

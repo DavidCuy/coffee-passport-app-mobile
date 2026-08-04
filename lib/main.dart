@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'core/auth/dev_auth_local_datasource.dart';
 import 'core/auth/dev_login_screen.dart';
 import 'core/network/api_client.dart';
+import 'features/diary/data/repositories/diary_repository_impl.dart';
+import 'features/diary/domain/repositories/diary_repository.dart';
+import 'features/diary/presentation/screens/diary_screen.dart';
 import 'features/passport/data/repositories/passport_repository_impl.dart';
 import 'features/passport/domain/repositories/passport_repository.dart';
 import 'features/passport/presentation/screens/passport_screen.dart';
@@ -95,10 +98,10 @@ class _AppRootState extends State<_AppRoot> {
   }
 }
 
-/// Navegación mínima entre las 3 pantallas reales construidas en esta
-/// tarea. No es una feature en sí (no aparece en `Fase 1 -
-/// Funcionalidades.md` como sección propia) — es sólo el andamiaje de
-/// navegación necesario para poder probarlas todas desde un solo build.
+/// Navegación mínima entre las pantallas reales construidas hasta
+/// ahora (Pasaporte, Escanear, Cafeterías, Diario de cata). No es una
+/// feature en sí — es sólo el andamiaje de navegación necesario para
+/// poder probarlas todas desde un solo build.
 class _HomeTabs extends StatefulWidget {
   const _HomeTabs();
 
@@ -122,6 +125,9 @@ class _HomeTabsState extends State<_HomeTabs> {
   );
   late final ShopReviewRepository _shopReviewRepository =
       ShopReviewRepositoryImpl(apiClient: _apiClient);
+  late final DiaryRepository _diaryRepository = DiaryRepositoryImpl(
+    apiClient: _apiClient,
+  );
 
   int _index = 0;
 
@@ -140,6 +146,10 @@ class _HomeTabsState extends State<_HomeTabs> {
         shopRepository: _shopRepository,
         favoriteRepository: _favoriteRepository,
         shopReviewRepository: _shopReviewRepository,
+      ),
+      DiaryScreen(
+        diaryRepository: _diaryRepository,
+        shopRepository: _shopRepository,
       ),
     ];
     return Scaffold(
@@ -168,6 +178,12 @@ class _HomeTabsState extends State<_HomeTabs> {
             icon: Icon(Icons.storefront_outlined),
             selectedIcon: Icon(Icons.storefront),
             label: 'Cafeterías',
+          ),
+          NavigationDestination(
+            key: Key('nav_diary_tab'),
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Diario',
           ),
         ],
       ),
