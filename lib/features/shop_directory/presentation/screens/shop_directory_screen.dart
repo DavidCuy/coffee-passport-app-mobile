@@ -183,23 +183,134 @@ class _ShopDirectoryScreenState extends State<ShopDirectoryScreen> {
                 onToggleFavorite: _toggleFavorite,
               );
             }
+            final favoriteCount = shops.where((s) => s.isFavorite).length;
             return RefreshIndicator(
               onRefresh: _refresh,
-              child: ListView.builder(
+              child: ListView(
                 key: const Key('shop_directory_list_view'),
-                itemCount: shops.length,
-                itemBuilder: (context, index) {
-                  final shop = shops[index];
-                  return ShopCard(
-                    shop: shop,
-                    onTap: () => _openDetail(shop),
-                    onToggleFavorite: () => _toggleFavorite(shop),
-                  );
-                },
+                padding: const EdgeInsets.only(bottom: 16),
+                children: [
+                  _DirectoryHero(
+                    totalShops: shops.length,
+                    favoriteCount: favoriteCount,
+                  ),
+                  const SizedBox(height: 24),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Mis cafeterías',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: PassportColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: PassportColors.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: PassportColors.textPrimary.withValues(
+                            alpha: 0.06,
+                          ),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < shops.length; i++) ...[
+                          if (i != 0) const SizedBox(height: 10),
+                          ShopCard(
+                            shop: shops[i],
+                            showBackground: false,
+                            onTap: () => _openDetail(shops[i]),
+                            onToggleFavorite: () => _toggleFavorite(shops[i]),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Encabezado grande con el resumen del directorio (equivalente al
+/// "balance" del mock de referencia dado por el cliente): fondo sólido
+/// `--primary` (sin gradiente, ver regla anti-patrón del proyecto) con
+/// el total de cafeterías en tipografía grande y el conteo de
+/// favoritas debajo.
+class _DirectoryHero extends StatelessWidget {
+  const _DirectoryHero({required this.totalShops, required this.favoriteCount});
+
+  final int totalShops;
+  final int favoriteCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: PassportColors.primary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Directorio',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$totalShops',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'cafeterías',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            favoriteCount == 0
+                ? 'Ninguna en tus favoritas todavía'
+                : '$favoriteCount en tus favoritas',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

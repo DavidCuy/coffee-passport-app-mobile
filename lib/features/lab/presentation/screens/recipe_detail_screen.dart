@@ -201,7 +201,6 @@ class _StepTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: PassportColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: PassportColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

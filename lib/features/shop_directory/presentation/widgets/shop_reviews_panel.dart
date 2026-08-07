@@ -292,7 +292,6 @@ class _MyReviewSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: PassportColors.surface2,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PassportColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

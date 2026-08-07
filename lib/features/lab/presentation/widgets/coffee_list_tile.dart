@@ -34,7 +34,6 @@ class CoffeeListTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: PassportColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PassportColors.border),
         ),
         child: Row(
           children: [

@@ -53,7 +53,14 @@ class ShopMapView extends StatefulWidget {
 class _ShopMapViewState extends State<ShopMapView> {
   static const LatLng _fallbackCenter = LatLng(4.6533, -74.0575); // Demo 1 (Chapinero)
 
+  // Mismos valores que `initialChildSize`/`maxChildSize` del
+  // `DraggableScrollableSheet` de abajo — el handle sólo alterna entre
+  // esos 2 extremos (colapsada/expandida), no arrastra libre.
+  static const double _sheetCollapsedSize = 0.16;
+  static const double _sheetExpandedSize = 0.82;
+
   LatLng? _myLocation;
+  final _sheetController = DraggableScrollableController();
 
   @override
   void initState() {
@@ -63,6 +70,25 @@ class _ShopMapViewState extends State<ShopMapView> {
     // del mapa por un fallo de ubicación (a diferencia de `scan`, acá
     // no es una validación de negocio, sólo comodidad de UX).
     unawaited(_loadMyLocation());
+  }
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  /// El `DraggableScrollableSheet` sólo responde a gestos de arrastre
+  /// (sobre su `ListView` interno) — un simple tap en la rayita del
+  /// handle no hacía nada. Con el `controller` sí podemos animarla
+  /// programáticamente: tap alterna entre colapsada y expandida.
+  void _toggleSheet() {
+    final expanded = _sheetController.size > _sheetCollapsedSize + 0.05;
+    _sheetController.animateTo(
+      expanded ? _sheetCollapsedSize : _sheetExpandedSize,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _loadMyLocation() async {
@@ -127,31 +153,35 @@ class _ShopMapViewState extends State<ShopMapView> {
         ),
         DraggableScrollableSheet(
           key: const Key('shop_map_sheet'),
-          initialChildSize: 0.16,
+          controller: _sheetController,
+          initialChildSize: _sheetCollapsedSize,
           minChildSize: 0.12,
-          maxChildSize: 0.82,
+          maxChildSize: _sheetExpandedSize,
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
                 color: PassportColors.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x22000000),
-                    blurRadius: 12,
-                    offset: Offset(0, -2),
-                  ),
-                ],
+                border: Border(
+                  top: BorderSide(color: PassportColors.border, width: 1.5),
+                ),
               ),
               child: Column(
                 children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: PassportColors.border,
-                      borderRadius: BorderRadius.circular(999),
+                  GestureDetector(
+                    key: const Key('shop_map_sheet_handle'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _toggleSheet,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: PassportColors.border,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
                     ),
                   ),
                   Padding(

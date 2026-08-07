@@ -267,7 +267,6 @@ class _OriginTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: PassportColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PassportColors.border),
       ),
       child: Row(
         children: [

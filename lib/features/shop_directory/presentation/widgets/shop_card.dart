@@ -23,6 +23,7 @@ class ShopCard extends StatelessWidget {
     required this.shop,
     this.onTap,
     this.onToggleFavorite,
+    this.showBackground = true,
   });
 
   final Shop shop;
@@ -33,20 +34,50 @@ class ShopCard extends StatelessWidget {
   /// mano).
   final VoidCallback? onToggleFavorite;
 
+  /// `false` renderiza sólo la fila (sin `Container` con fondo/margen
+  /// propio) — usado por `ShopDirectoryScreen` cuando varias filas
+  /// viven juntas dentro de una única card contenedora (estilo lista
+  /// "Activity" tipo PayPal) en vez de una card individual por
+  /// cafetería. `FavoriteShopsScreen`/`ShopMapView` siguen usando el
+  /// default (`true`, card individual).
+  final bool showBackground;
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      key: Key('shop_card_${shop.id}'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    final row = Material(
+      color: Colors.transparent,
       child: ListTile(
         onTap: onTap,
-        leading: Icon(
-          shop.isStamped ? Icons.local_cafe : Icons.local_cafe_outlined,
-          color: shop.isStamped ? PassportColors.primary : null,
+        hoverColor: Colors.transparent,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 6,
         ),
-        title: Text(shop.name),
+        leading: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: shop.isStamped
+                ? PassportColors.primary
+                : PassportColors.surface2,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            shop.isStamped ? Icons.local_cafe : Icons.local_cafe_outlined,
+            color: shop.isStamped ? Colors.white : PassportColors.textFaint,
+          ),
+        ),
+        title: Text(
+          shop.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: PassportColors.textPrimary,
+          ),
+        ),
         subtitle: Text(
           shop.address.isEmpty ? 'Dirección no disponible' : shop.address,
+          style: const TextStyle(color: PassportColors.textSecondary),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -73,6 +104,19 @@ class ShopCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (!showBackground) {
+      return KeyedSubtree(key: Key('shop_card_${shop.id}'), child: row);
+    }
+    return Container(
+      key: Key('shop_card_${shop.id}'),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: PassportColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: row,
     );
   }
 }
