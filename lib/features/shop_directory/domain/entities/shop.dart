@@ -31,6 +31,7 @@ class Shop {
     this.websiteUrl,
     this.instagramUrl,
     this.facebookUrl,
+    this.photoUrl,
     this.avgRating,
     this.reviewCount,
     this.isFavorite = false,
@@ -59,6 +60,11 @@ class Shop {
   final String? instagramUrl;
   final String? facebookUrl;
 
+  /// URL pública de la foto de portada (S3), subida por el partner desde
+  /// el dashboard. `null` = sin foto -- la UI muestra un placeholder (ver
+  /// `_ShopPhotoPlaceholder` en `shop_detail_screen.dart`).
+  final String? photoUrl;
+
   /// Promedio de `shop_reviews.rating` (1-5) — `rating_average` en
   /// `GET /shops/{id}`. `null` significa "sin reseñas todavía" (el
   /// backend nunca manda `0.0` como valor engañoso).
@@ -68,7 +74,12 @@ class Shop {
   /// Si el usuario actual la marcó como favorita (`GET /favorites`).
   final bool isFavorite;
 
-  Shop copyWith({bool? isFavorite, double? avgRating, int? reviewCount}) {
+  Shop copyWith({
+    bool? isFavorite,
+    double? avgRating,
+    int? reviewCount,
+    String? photoUrl,
+  }) {
     return Shop(
       id: id,
       name: name,
@@ -82,6 +93,7 @@ class Shop {
       websiteUrl: websiteUrl,
       instagramUrl: instagramUrl,
       facebookUrl: facebookUrl,
+      photoUrl: photoUrl ?? this.photoUrl,
       avgRating: avgRating ?? this.avgRating,
       reviewCount: reviewCount ?? this.reviewCount,
       isFavorite: isFavorite ?? this.isFavorite,

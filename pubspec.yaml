@@ -65,6 +65,11 @@ dependencies:
   # only".
   google_maps_flutter: ^2.12.3
 
+  # Botón "Compartir" de la ficha de cafetería (`ShopDetailScreen`) — sin
+  # link web/deep-link público por cafetería todavía, así que comparte
+  # sólo texto plano (nombre + dirección).
+  share_plus: ^11.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

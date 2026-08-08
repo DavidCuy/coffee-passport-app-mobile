@@ -87,6 +87,7 @@ class ShopRepositoryImpl implements ShopRepository {
       instagramUrl:
           (json['instagram_url'] ?? json['instagramUrl']) as String?,
       facebookUrl: (json['facebook_url'] ?? json['facebookUrl']) as String?,
+      photoUrl: (json['photo_url'] ?? json['photoUrl']) as String?,
       // Nombres de campo confirmados contra la Supabase real por el
       // Agente Backend (2026-08-02, ver `API endpoints.md`):
       // `rating_average` (float, `null` sin reseñas — no `0.0`) y

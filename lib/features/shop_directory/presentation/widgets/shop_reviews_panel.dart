@@ -49,10 +49,14 @@ class ShopReviewsPanel extends StatefulWidget {
   final ValueChanged<List<ShopReview>>? onReviewsChanged;
 
   @override
-  State<ShopReviewsPanel> createState() => _ShopReviewsPanelState();
+  State<ShopReviewsPanel> createState() => ShopReviewsPanelState();
 }
 
-class _ShopReviewsPanelState extends State<ShopReviewsPanel> {
+/// Pública (no `_ShopReviewsPanelState`) para que `ShopDetailScreen` pueda
+/// tipar un `GlobalKey<ShopReviewsPanelState>` y disparar [openWriteForm]
+/// desde el botón "Calificar" de la fila de acciones — sin duplicar la
+/// lógica del formulario de reseña acá.
+class ShopReviewsPanelState extends State<ShopReviewsPanel> {
   late Future<List<ShopReview>> _future;
   bool _formOpen = false;
   bool _submitting = false;
@@ -90,6 +94,12 @@ class _ShopReviewsPanelState extends State<ShopReviewsPanel> {
     });
     await next;
   }
+
+  /// Trigger público para que `ShopDetailScreen` abra el formulario desde
+  /// el botón "Calificar" de la fila de acciones -- pre-llena con la
+  /// reseña propia si ya existe (mismo criterio que el botón "Editar" de
+  /// `ShopReviewCard`), o arranca en blanco si todavía no hay una.
+  void openWriteForm() => _openForm(existing: _myReview);
 
   void _openForm({ShopReview? existing}) {
     setState(() {

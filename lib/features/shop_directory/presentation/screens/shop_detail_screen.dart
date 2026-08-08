@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../passport/presentation/widgets/stamp_tile.dart'
@@ -17,12 +18,19 @@ import '../widgets/shop_reviews_panel.dart';
 /// overlay porque esta app todavía no tiene un patrón de navegación
 /// por sheets/overlays establecido — ver `ARCHITECTURE.md`).
 ///
-/// Muestra: horario, beneficio activo, dirección, botón de favorito y
-/// rating promedio + reseñas (`GET /shops/{id}/reviews`).
+/// Header con foto de portada a pantalla completa (`shop.photoUrl`,
+/// placeholder flat si no hay), nombre/dirección superpuestos, pill
+/// "Abierto ahora"/"Cerrado" calculado del lado del cliente contra
+/// `shop.hoursRaw` (ver `_computeOpenNow`), fila de acciones
+/// Favorito/Calificar/Compartir, y debajo el resto de la ficha sin
+/// cambios: rating, beneficio activo, descripción, horario y reseñas
+/// (`GET /shops/{id}/reviews`).
 ///
 /// Widget keys para QA:
 /// - `Key('shop_detail_screen')` — raíz (`Scaffold`).
-/// - `Key('shop_detail_favorite_button')` — corazón en el AppBar.
+/// - `Key('shop_detail_favorite_button')` — corazón en la fila de
+///   acciones (antes vivía en el AppBar -- se movió acá al quitar el
+///   `SliverAppBar` por el header de foto).
 /// - Ver `ShopReviewsPanel` para los keys de la sección de reseñas.
 class ShopDetailScreen extends StatefulWidget {
   const ShopDetailScreen({
@@ -46,6 +54,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   late Future<_ShopDetailData> _future;
   bool _favoriteBusy = false;
   bool? _favoriteOverride;
+  final _reviewsPanelKey = GlobalKey<ShopReviewsPanelState>();
 
   /// Promedio calculado del lado del cliente a partir de
   /// `GET /shops/{id}/reviews`, usado sólo si `shop.avgRating` no vino
@@ -118,20 +127,46 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     });
   }
 
+  /// Handler del botón "Calificar" de la fila de acciones -- abre el
+  /// formulario que ya vive dentro de `ShopReviewsPanel` (no duplica
+  /// lógica de reseña acá) y lo hace visible en pantalla.
+  void _openReviewForm() {
+    _reviewsPanelKey.currentState?.openWriteForm();
+    final panelContext = _reviewsPanelKey.currentContext;
+    if (panelContext != null) {
+      Scrollable.ensureVisible(
+        panelContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  /// Handler del botón/ícono "Compartir" -- sin link web/deep-link
+  /// público por cafetería todavía (ver docstring de `pubspec.yaml`),
+  /// comparte sólo texto plano.
+  void _share(Shop shop) {
+    SharePlus.instance.share(
+      ShareParams(text: '${shop.name} — ${shop.address}'),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: const Key('shop_detail_screen'),
       backgroundColor: PassportColors.background,
-      body: SafeArea(
-        child: FutureBuilder<_ShopDetailData>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Column(
+      body: FutureBuilder<_ShopDetailData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SafeArea(
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return SafeArea(
+              child: Column(
                 children: [
                   AppBar(
                     backgroundColor: PassportColors.background,
@@ -160,56 +195,50 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     ),
                   ),
                 ],
-              );
-            }
-            final data = snapshot.data!;
-            final shop = data.shop;
-            final isFavorite = _favoriteOverride ?? data.isFavorite;
-            // Prioriza el promedio recalculado en vivo por
-            // `ShopReviewsPanel` (`_onReviewsChanged`, ver arriba) sobre
-            // el de `shop.avgRating` (snapshot tomado cuando se abrió
-            // la ficha, vía `_load()`): el panel se refresca solo tras
-            // cada mutación (crear/editar/borrar reseña), pero esta
-            // pantalla no vuelve a pedir `GET /shops/{id}` en ese
-            // momento — con la prioridad al revés, el promedio quedaba
-            // congelado en el valor inicial para siempre. Bug real
-            // encontrado por QA Mobile (caso REV-09): "3 de cada 5" no
-            // se actualizaba después de editar la calificación propia,
-            // aunque el backend sí recalculaba bien.
-            final avgRating = _clientAvgRating ?? shop.avgRating;
-            final reviewCount = _clientReviewCount ?? shop.reviewCount;
-            return CustomScrollView(
+              ),
+            );
+          }
+          final data = snapshot.data!;
+          final shop = data.shop;
+          final isFavorite = _favoriteOverride ?? data.isFavorite;
+          // Prioriza el promedio recalculado en vivo por
+          // `ShopReviewsPanel` (`_onReviewsChanged`, ver arriba) sobre
+          // el de `shop.avgRating` (snapshot tomado cuando se abrió
+          // la ficha, vía `_load()`): el panel se refresca solo tras
+          // cada mutación (crear/editar/borrar reseña), pero esta
+          // pantalla no vuelve a pedir `GET /shops/{id}` en ese
+          // momento — con la prioridad al revés, el promedio quedaba
+          // congelado en el valor inicial para siempre. Bug real
+          // encontrado por QA Mobile (caso REV-09): "3 de cada 5" no
+          // se actualizaba después de editar la calificación propia,
+          // aunque el backend sí recalculaba bien.
+          final avgRating = _clientAvgRating ?? shop.avgRating;
+          final reviewCount = _clientReviewCount ?? shop.reviewCount;
+          // `top: false` -- el header de foto sangra hasta el borde
+          // superior de pantalla (por fuera del safe area) y maneja su
+          // propio padding contra el notch/status bar (ver
+          // `_ShopPhotoHeader`); el resto del contenido sí respeta el
+          // safe area inferior normal (home indicator, etc).
+          return SafeArea(
+            top: false,
+            child: CustomScrollView(
               slivers: [
-                SliverAppBar(
-                  backgroundColor: PassportColors.background,
-                  foregroundColor: PassportColors.textPrimary,
-                  elevation: 0,
-                  pinned: true,
-                  title: Text(shop.name),
-                  actions: [
-                    IconButton(
-                      key: const Key('shop_detail_favorite_button'),
-                      onPressed: _favoriteBusy
-                          ? null
-                          : () => _toggleFavorite(isFavorite),
-                      icon: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite
-                            ? PassportColors.primary
-                            : PassportColors.textFaint,
-                      ),
-                      tooltip: isFavorite
-                          ? 'Quitar de favoritos'
-                          : 'Marcar como favorita',
-                    ),
-                  ],
+                SliverToBoxAdapter(
+                  child: _ShopPhotoHeader(shop: shop, onShare: () => _share(shop)),
+                ),
+                SliverToBoxAdapter(
+                  child: _ShopActionButtons(
+                    isFavorite: isFavorite,
+                    favoriteBusy: _favoriteBusy,
+                    onFavoriteTap: () => _toggleFavorite(isFavorite),
+                    onRateTap: _openReviewForm,
+                    onShareTap: () => _share(shop),
+                  ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _ShopHeader(shop: shop),
-                      const SizedBox(height: 12),
                       Row(
                         children: [
                           if (avgRating != null) ...[
@@ -259,6 +288,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       const Divider(color: PassportColors.border),
                       const SizedBox(height: 16),
                       ShopReviewsPanel(
+                        key: _reviewsPanelKey,
                         shopId: shop.id,
                         repository: widget.shopReviewRepository,
                         onReviewsChanged: _onReviewsChanged,
@@ -267,9 +297,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   ),
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -282,84 +312,340 @@ class _ShopDetailData {
   final bool isFavorite;
 }
 
-class _ShopHeader extends StatelessWidget {
-  const _ShopHeader({required this.shop});
+/// Header de foto de portada a pantalla completa (~280px), sangrado hasta
+/// el borde superior de pantalla (por eso lee `MediaQuery` a mano en vez
+/// de depender de un `SafeArea` ancestro para el padding de la fila
+/// back/compartir). Reemplaza al viejo `_ShopHeader` (avatar+nombre) --
+/// nombre/dirección ahora se superponen sobre la foto.
+class _ShopPhotoHeader extends StatelessWidget {
+  const _ShopPhotoHeader({required this.shop, required this.onShare});
 
   final Shop shop;
-
-  String get _initials {
-    final parts = shop.name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    final first = parts.first[0];
-    final second = parts.length > 1 && parts[1].isNotEmpty ? parts[1][0] : '';
-    return (first + second).toUpperCase();
-  }
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: PassportColors.surface2,
-            border: Border.all(color: PassportColors.border),
+    final topPadding = MediaQuery.of(context).padding.top;
+    final isOpen = _computeOpenNow(shop.hoursRaw);
+    return SizedBox(
+      height: 280,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (shop.photoUrl != null && shop.photoUrl!.trim().isNotEmpty)
+            Image.network(
+              shop.photoUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : const _ShopPhotoPlaceholder(),
+              errorBuilder: (context, error, stackTrace) =>
+                  const _ShopPhotoPlaceholder(),
+            )
+          else
+            const _ShopPhotoPlaceholder(),
+          // Scrim funcional (no decorativo) para legibilidad del texto
+          // superpuesto -- confinado al ~45% inferior, no un gradiente de
+          // marca. Ver nota en el plan sobre la regla anti-gradiente.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.55, 1.0],
+                colors: [Colors.transparent, Color(0xB3000000)],
+              ),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            _initials,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: PassportColors.primary,
-              fontSize: 18,
+          Positioned(
+            top: topPadding + 8,
+            left: 12,
+            right: 12,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _HeaderIconButton(
+                  icon: Icons.arrow_back,
+                  tooltip: 'Volver',
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+                _HeaderIconButton(
+                  icon: Icons.share_outlined,
+                  tooltip: 'Compartir',
+                  onTap: onShare,
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isOpen != null) ...[
+                  _OpenStatusPill(isOpen: isOpen),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  shop.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.place_outlined, size: 15, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        shop.address.isEmpty
+                            ? 'Dirección no disponible'
+                            : shop.address,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder flat cuando no hay `photoUrl` (o la imagen falla/expira) --
+/// fondo sólido + ícono, mismo lenguaje visual que los avatares
+/// circulares de `ShopCard`. Sin asset empaquetado a propósito (ver nota
+/// del plan).
+class _ShopPhotoPlaceholder extends StatelessWidget {
+  const _ShopPhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: PassportColors.surface2,
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.local_cafe_outlined,
+        size: 56,
+        color: PassportColors.textFaint,
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.35),
+      shape: const CircleBorder(),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white, size: 20),
+        tooltip: tooltip,
+      ),
+    );
+  }
+}
+
+class _OpenStatusPill extends StatelessWidget {
+  const _OpenStatusPill({required this.isOpen});
+
+  final bool isOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isOpen ? const Color(0xFF2D6A4F) : const Color(0xFF7A7A7A),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        isOpen ? 'Abierto ahora' : 'Cerrado',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// Fila de acciones circulares (Favorito/Calificar/Compartir), mismo
+/// lenguaje visual que los avatares circulares 44px de `ShopCard`.
+class _ShopActionButtons extends StatelessWidget {
+  const _ShopActionButtons({
+    required this.isFavorite,
+    required this.favoriteBusy,
+    required this.onFavoriteTap,
+    required this.onRateTap,
+    required this.onShareTap,
+  });
+
+  final bool isFavorite;
+  final bool favoriteBusy;
+  final VoidCallback onFavoriteTap;
+  final VoidCallback onRateTap;
+  final VoidCallback onShareTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _ActionButton(
+            buttonKey: const Key('shop_detail_favorite_button'),
+            icon: isFavorite ? Icons.favorite : Icons.favorite_border,
+            label: 'Favorito',
+            active: isFavorite,
+            onTap: favoriteBusy ? null : onFavoriteTap,
+          ),
+          _ActionButton(
+            icon: Icons.star_border,
+            label: 'Calificar',
+            active: false,
+            onTap: onRateTap,
+          ),
+          _ActionButton(
+            icon: Icons.share_outlined,
+            label: 'Compartir',
+            active: false,
+            onTap: onShareTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    this.buttonKey,
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  /// Key del `InkWell` tappable en sí -- **no** del `Column` completo
+  /// (ícono + label). Un `WidgetTester.tap()` golpea el centro geométrico
+  /// del widget encontrado por key; con label debajo, ese centro cae
+  /// fuera del círculo tappable (mismo bug #7 ya documentado en
+  /// `PassportScreen._ViewToggle`, no repetirlo acá).
+  final Key? buttonKey;
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          key: buttonKey,
+          color: active ? PassportColors.primary : PassportColors.surface2,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                icon,
+                size: 22,
+                color: active ? Colors.white : PassportColors.primary,
+              ),
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                shop.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                  color: PassportColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.place_outlined,
-                    size: 15,
-                    color: PassportColors.textFaint,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      shop.address.isEmpty
-                          ? 'Dirección no disponible'
-                          : shop.address,
-                      style: const TextStyle(
-                        color: PassportColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: PassportColors.textSecondary,
           ),
         ),
       ],
     );
   }
+}
+
+/// Calcula "abierto ahora" contra `shop.hoursRaw` (JSON de forma libre,
+/// ver `_ShopHoursSection`) para el pill del header. Best-effort: sólo
+/// entiende 2 formas conocidas de valor por día -- objeto
+/// `{closed, open, close}` (shape que manda el dashboard, ver
+/// `WeeklyHoursEditor`/`ShopProfileInput.hours` del portal) o string
+/// `"HH:MM-HH:MM"`. Cualquier otra forma, o si no hay entrada para el día
+/// actual, regresa `null` (desconocido) -- el pill se oculta en vez de
+/// mostrar un estado adivinado.
+bool? _computeOpenNow(Object? hoursRaw) {
+  if (hoursRaw is! Map || hoursRaw.isEmpty) return null;
+
+  const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  final todayKey = dayKeys[DateTime.now().weekday - 1];
+  final entry = hoursRaw[todayKey];
+  if (entry == null) return null;
+
+  if (entry is Map) {
+    if (entry['closed'] == true) return false;
+    final openMinutes = _parseHm(entry['open']);
+    final closeMinutes = _parseHm(entry['close']);
+    if (openMinutes == null || closeMinutes == null) return null;
+    return _minutesNowBetween(openMinutes, closeMinutes);
+  }
+
+  if (entry is String) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$')
+        .firstMatch(entry.trim());
+    if (match == null) return null;
+    final openMinutes = int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);
+    final closeMinutes = int.parse(match.group(3)!) * 60 + int.parse(match.group(4)!);
+    return _minutesNowBetween(openMinutes, closeMinutes);
+  }
+
+  return null;
+}
+
+int? _parseHm(Object? value) {
+  if (value is! String) return null;
+  final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value.trim());
+  if (match == null) return null;
+  return int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);
+}
+
+bool _minutesNowBetween(int openMinutes, int closeMinutes) {
+  if (closeMinutes <= openMinutes) return false; // rango inválido/overnight, no soportado
+  final now = TimeOfDay.now();
+  final nowMinutes = now.hour * 60 + now.minute;
+  return nowMinutes >= openMinutes && nowMinutes < closeMinutes;
 }
 
 class _PerkBanner extends StatelessWidget {
