@@ -1,7 +1,8 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 // Import cruzado explícito hacia la feature `scan` — ver el comentario
 // de `geolocator` en `pubspec.yaml`: `GeolocationDatasource` sigue
@@ -18,19 +19,25 @@ import '../../domain/entities/shop.dart';
 import 'shop_card.dart';
 
 /// Vista de mapa del directorio (Fase 1, sección 2) — equivalente a
-/// `#screen-mapa` del mock (`pasaporte-cafe-mock.html`): un
-/// `GoogleMap` con un pin por cafetería + una hoja inferior
-/// arrastrable (`DraggableScrollableSheet`, aquí en vez del `.sheet`
-/// con CSS custom del mock, pero mismo comportamiento: colapsada por
-/// defecto, se puede arrastrar hacia arriba para ver el directorio
-/// completo) que lista las mismas cafeterías.
+/// `#screen-mapa` del mock (`pasaporte-cafe-mock.html`): un mapa con
+/// un pin por cafetería + una hoja inferior arrastrable
+/// (`DraggableScrollableSheet`, aquí en vez del `.sheet` con CSS
+/// custom del mock, pero mismo comportamiento: colapsada por defecto,
+/// se puede arrastrar hacia arriba para ver el directorio completo)
+/// que lista las mismas cafeterías.
+///
+/// Usa `flutter_map` + teselas de OpenStreetMap en vez de
+/// `google_maps_flutter` (hasta 2026-08-08) — esta prueba de concepto
+/// no quiere depender de una API key de Google Maps (ver comentario
+/// de `flutter_map` en `pubspec.yaml`). Sin key, sin config nativa
+/// (Android/iOS/web), sin costo.
 ///
 /// No incluye lógica de negocio propia — recibe [shops] ya resueltos
 /// y delega toque de tarjeta / favorito a los callbacks, igual que
 /// `ShopCard`.
 ///
 /// Widget keys para QA:
-/// - `Key('shop_map_view')` — raíz del `GoogleMap`.
+/// - `Key('shop_map_view')` — raíz del `FlutterMap`.
 /// - `Key('shop_map_sheet')` — hoja inferior con el directorio.
 class ShopMapView extends StatefulWidget {
   const ShopMapView({
@@ -116,40 +123,43 @@ class _ShopMapViewState extends State<ShopMapView> {
 
   @override
   Widget build(BuildContext context) {
-    final markers = <Marker>{
+    final markers = <Marker>[
       for (final shop in widget.shops)
         Marker(
-          markerId: MarkerId(shop.id),
-          position: LatLng(shop.latitude, shop.longitude),
-          infoWindow: InfoWindow(
-            title: shop.name,
-            snippet: shop.address,
+          point: LatLng(shop.latitude, shop.longitude),
+          width: 40,
+          height: 40,
+          child: _ShopPin(
             onTap: () => widget.onShopTap?.call(shop),
+            tooltip: shop.name,
           ),
-          onTap: () => widget.onShopTap?.call(shop),
         ),
       if (_myLocation != null)
         Marker(
-          markerId: const MarkerId('__me__'),
-          position: _myLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueAzure,
-          ),
-          infoWindow: const InfoWindow(title: 'Tu ubicación'),
+          point: _myLocation!,
+          width: 20,
+          height: 20,
+          child: const _MyLocationDot(),
         ),
-    };
+    ];
 
     return Stack(
       children: [
-        GoogleMap(
+        FlutterMap(
           key: const Key('shop_map_view'),
-          initialCameraPosition: CameraPosition(
-            target: _initialCenter,
-            zoom: 14,
+          options: MapOptions(
+            initialCenter: _initialCenter,
+            initialZoom: 14,
           ),
-          markers: markers,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              // Requerido por la política de uso de tiles de OSM --
+              // identifica la app que hace las requests, no una key.
+              userAgentPackageName: 'com.pasaportecafe.coffee_passport_app',
+            ),
+            MarkerLayer(markers: markers),
+          ],
         ),
         DraggableScrollableSheet(
           key: const Key('shop_map_sheet'),
@@ -235,3 +245,44 @@ class _ShopMapViewState extends State<ShopMapView> {
   }
 }
 
+/// Pin de cafetería sobre el mapa -- reemplaza al `Marker`/`InfoWindow`
+/// nativo de Google Maps (`flutter_map` no trae InfoWindow, sólo un
+/// `child` posicionado; el tap se maneja acá mismo).
+class _ShopPin extends StatelessWidget {
+  const _ShopPin({required this.onTap, required this.tooltip});
+
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: const Icon(
+          Icons.location_on,
+          color: PassportColors.primary,
+          size: 40,
+        ),
+      ),
+    );
+  }
+}
+
+/// Punto de "tu ubicación" -- equivalente al marcador azul default de
+/// Google Maps.
+class _MyLocationDot extends StatelessWidget {
+  const _MyLocationDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF1A73E8),
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+    );
+  }
+}

@@ -12,18 +12,6 @@
         android:label="coffee_passport_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- Requerido por `google_maps_flutter` (feature `shop_directory`,
-             vista de mapa — ver
-             lib/features/shop_directory/presentation/widgets/shop_map_view.dart).
-             ⚠️ Placeholder: sin una API key real de Google Maps (Google Cloud
-             Console, restringida a este `applicationId` + SHA-1), el mapa
-             compila y corre pero se ve en blanco / con la marca de agua
-             "for development purposes only". Reemplazar antes de un build
-             real de QA/producción — no es un secreto de servidor, pero sí
-             debe restringirse por paquete+huella para no quedar abierta. -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

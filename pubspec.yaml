@@ -55,20 +55,19 @@ dependencies:
   # la posición del usuario — ver `presentation/widgets/shop_map_view.dart`.
   geolocator: ^14.0.2
 
-  # Mapa & Directorio de Barras (Fase 1, sección 2) — agregado ahora
-  # que esta feature arranca de verdad (antes pendiente, ver
-  # ARCHITECTURE.md). Requiere una API key real de Google Maps para
-  # que las teselas del mapa carguen (ver comentarios en
-  # `android/app/src/main/AndroidManifest.xml` e
-  # `ios/Runner/AppDelegate.swift`) — sin key, el SDK igual compila y
-  # corre, pero el mapa se ve en blanco/"for development purposes
-  # only".
-  google_maps_flutter: ^2.12.3
-
   # Botón "Compartir" de la ficha de cafetería (`ShopDetailScreen`) — sin
   # link web/deep-link público por cafetería todavía, así que comparte
   # sólo texto plano (nombre + dirección).
   share_plus: ^11.1.0
+
+  # Mapa & Directorio de Barras (Fase 1, sección 2) — `flutter_map` +
+  # teselas de OpenStreetMap en vez de `google_maps_flutter` (usado
+  # hasta 2026-08-08): esta prueba de concepto no quiere depender de
+  # una API key de Google Maps (riesgo real ya materializado una vez —
+  # ver historial de `web/index.html`/`AndroidManifest.xml`/
+  # `AppDelegate.swift`). OSM no requiere key ni config nativa alguna.
+  flutter_map: ^8.3.1
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:
