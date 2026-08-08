@@ -153,12 +153,25 @@ class _ShopMapViewState extends State<ShopMapView> {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              // Requerido por la política de uso de tiles de OSM --
+              // CartoDB Positron -- gris claro/minimalista en vez del OSM
+              // default (colorido), pedido explícito del cliente porque
+              // el default no encajaba con el look flat de la app. Sin
+              // key, gratis (atribución obligatoria, ver
+              // `RichAttributionWidget` abajo).
+              urlTemplate:
+                  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              // Requerido por la política de uso de tiles de OSM/CARTO --
               // identifica la app que hace las requests, no una key.
               userAgentPackageName: 'com.pasaportecafe.coffee_passport_app',
             ),
             MarkerLayer(markers: markers),
+            RichAttributionWidget(
+              attributions: [
+                TextSourceAttribution('OpenStreetMap contributors'),
+                TextSourceAttribution('CARTO'),
+              ],
+            ),
           ],
         ),
         DraggableScrollableSheet(
